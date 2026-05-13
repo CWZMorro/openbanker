@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
-import fs from "fs";
+import * as fs from "node:fs";
 
 // Merges the base manifest with the platform-specific manifest.
 function mergeManifests(target) {
