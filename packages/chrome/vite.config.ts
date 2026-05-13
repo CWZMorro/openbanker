@@ -10,7 +10,9 @@ function mergeManifests(target) {
   // Read platform-specific overrides (background scripts vs service workers, IDs)
   const specific = JSON.parse(fs.readFileSync(`./manifest.${target}.json`, "utf-8"));
   
-  // Merge them
+  // Shallow merge — specific overrides base entirely for any shared top-level key.
+  // If both manifests ever define the same nested key (e.g. permissions[]),
+  // specific will clobber base's value rather than merge arrays.
   return { ...base, ...specific };
 }
 

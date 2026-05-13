@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env TARGET=chrome tsc --watch & vite build --watch",
+    "dev:firefox": "cross-env TARGET=firefox tsc --watch & vite build --watch",
     "build": "tsc && npm run build:chrome && npm run build:firefox",
     "build:chrome": "cross-env TARGET=chrome vite build && node scripts/copy-frontend.js chrome",
     "build:firefox": "cross-env TARGET=firefox vite build && node scripts/copy-frontend.js firefox"

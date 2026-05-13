@@ -5,7 +5,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "openbanker@voidranjer", 
+      "id": "openbanker@voidranjer",
       "strict_min_version": "109.0"
     }
   }
