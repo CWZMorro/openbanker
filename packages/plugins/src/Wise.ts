@@ -8,7 +8,7 @@ export default function scrape(): TransactionGroup[] {
       jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
     };
 
-    // "16 May 2026" or "11 March 2025" — year always present on /all-transactions
+    // "16 May 2026" or "11 March 2025" — full date with year
     const fullMatch = str.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
     if (fullMatch) {
       const day = fullMatch[1].padStart(2, '0');
@@ -17,13 +17,34 @@ export default function scrape(): TransactionGroup[] {
       if (monthIdx) return `${year}-${String(monthIdx).padStart(2, '0')}-${day}`;
     }
 
-    // Relative dates from /home page
     const now = new Date();
     const lower = str.toLowerCase();
     if (lower === 'today') return now.toISOString().slice(0, 10);
     if (lower === 'yesterday') {
       const d = new Date(now);
       d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10);
+    }
+
+    // "Card checked · Tue, 12 May" — strip status prefix and recurse
+    if (str.includes(' · ')) {
+      return parseDate(str.split(' · ').pop()!);
+    }
+
+    // "Tue, 12 May" — strip day-of-week prefix and recurse
+    const dayPrefixMatch = str.match(/^[A-Za-z]{2,3},?\s+(.+)$/);
+    if (dayPrefixMatch && /\d/.test(dayPrefixMatch[1])) {
+      return parseDate(dayPrefixMatch[1]);
+    }
+
+    // "Friday", "Monday", etc. — most recent occurrence of that weekday
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayIdx = dayNames.indexOf(lower);
+    if (dayIdx !== -1) {
+      let daysBack = (now.getDay() - dayIdx + 7) % 7;
+      if (daysBack === 0) daysBack = 7; // "today" shows as "Today", so this must be last week
+      const d = new Date(now);
+      d.setDate(now.getDate() - daysBack);
       return d.toISOString().slice(0, 10);
     }
 
@@ -61,12 +82,6 @@ export default function scrape(): TransactionGroup[] {
     };
   }
 
-  const links = Array.from(
-    document.querySelectorAll<HTMLAnchorElement>('a[data-testid="activity-summary"]')
-  );
-
-  if (!links.length) return [];
-
   const groups: Record<string, Transaction[]> = {};
 
   function addToGroup(currency: string, tx: Transaction) {
@@ -74,86 +89,80 @@ export default function scrape(): TransactionGroup[] {
     groups[currency].push(tx);
   }
 
-  for (const link of links) {
-    const statusEl = link.querySelector<HTMLElement>('[id$="-status"]');
-    if (statusEl?.textContent?.trim().toLowerCase() === 'cancelled') continue;
+  // --- /all-transactions page ---
+  const allTxLinks = Array.from(
+    document.querySelectorAll<HTMLAnchorElement>('a[data-testid="activity-summary"]')
+  );
 
-    const titleEl = link.querySelector<HTMLElement>('[id$="-title"]');
-    const amountEl = link.querySelector<HTMLElement>('[id$="-amount"]');
-    const dateEl = link.querySelector<HTMLElement>('[id$="-date"]');
+  if (allTxLinks.length) {
+    for (const link of allTxLinks) {
+      const statusEl = link.querySelector<HTMLElement>('[id$="-status"]');
+      if (statusEl?.textContent?.trim().toLowerCase() === 'cancelled') continue;
 
-    if (!titleEl || !amountEl) continue;
+      const titleEl = link.querySelector<HTMLElement>('[id$="-title"]');
+      const amountEl = link.querySelector<HTMLElement>('[id$="-amount"]');
+      const dateEl = link.querySelector<HTMLElement>('[id$="-date"]');
 
-    const parsed = parseAmount(amountEl);
-    if (!parsed) continue;
+      if (!titleEl || !amountEl) continue;
 
-    const hrefMatch = link.href.match(/by-resource\/([^/]+)\/(\d+)/);
-    const external_id = hrefMatch ? `${hrefMatch[1]}-${hrefMatch[2]}` : '';
+      const parsed = parseAmount(amountEl);
+      if (!parsed) continue;
 
-    const title = titleEl.textContent?.trim() ?? '';
-    const isConversionIn = /^To\s+[A-Z]{3}$/.test(title);
-    const date = parseDate(dateEl?.textContent?.trim() ?? '');
-    const amountInfoEl = link.querySelector<HTMLElement>('[class*="amountInfo"]');
+      const hrefMatch = link.href.match(/by-resource\/([^/]+)\/(\d+)/);
+      const external_id = hrefMatch ? `${hrefMatch[1]}-${hrefMatch[2]}` : '';
+      const title = titleEl.textContent?.trim() ?? '';
+      const isConversionIn = /^To\s+[A-Z]{3}$/.test(title);
+      const date = parseDate(dateEl?.textContent?.trim() ?? '');
+      const amountInfoEl = link.querySelector<HTMLElement>('[class*="amountInfo"]');
 
-    if (isConversionIn) {
-      // "To CAD": deposit the received currency, withdraw the sent currency
-      addToGroup(parsed.currency, {
-        date,
-        description: title,
-        amount: parsed.amount,
-        type: 'deposit',
-        category_name: '',
-        external_id,
-        notes: parsed.currency,
-      });
-
-      if (amountInfoEl) {
-        const sourceText = amountInfoEl.textContent?.trim() ?? '';
-        const sourceMatch = sourceText.match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
-        if (sourceMatch) {
-          addToGroup(sourceMatch[2], {
-            date,
-            description: title,
-            amount: parseFloat(sourceMatch[1].replace(/,/g, '')),
-            type: 'withdrawal',
-            category_name: '',
-            external_id: external_id ? `${external_id}-debit` : '',
-            notes: sourceMatch[2],
-          });
+      if (isConversionIn) {
+        addToGroup(parsed.currency, { date, description: title, amount: parsed.amount, type: 'deposit', category_name: '', external_id, notes: parsed.currency });
+        if (amountInfoEl) {
+          const sourceMatch = amountInfoEl.textContent?.trim().match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
+          if (sourceMatch) {
+            addToGroup(sourceMatch[2], { date, description: title, amount: parseFloat(sourceMatch[1].replace(/,/g, '')), type: 'withdrawal', category_name: '', external_id: external_id ? `${external_id}-debit` : '', notes: sourceMatch[2] });
+          }
         }
-      }
-    } else if (!parsed.isDeposit && amountInfoEl) {
-      // Auto-converted purchase (e.g. paid 18 CNY but deducted from MYR):
-      // the main amount is the merchant's currency — record only the actual wallet deduction
-      const sourceText = amountInfoEl.textContent?.trim() ?? '';
-      const sourceMatch = sourceText.match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
-      if (sourceMatch) {
-        addToGroup(sourceMatch[2], {
-          date,
-          description: title,
-          amount: parseFloat(sourceMatch[1].replace(/,/g, '')),
-          type: 'withdrawal',
-          category_name: '',
-          external_id,
-          notes: `${parsed.amount} ${parsed.currency}`,
-        });
+      } else if (!parsed.isDeposit && amountInfoEl) {
+        const sourceMatch = amountInfoEl.textContent?.trim().match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
+        if (sourceMatch) {
+          addToGroup(sourceMatch[2], { date, description: title, amount: parseFloat(sourceMatch[1].replace(/,/g, '')), type: 'withdrawal', category_name: '', external_id, notes: `${parsed.amount} ${parsed.currency}` });
+        } else {
+          addToGroup(parsed.currency, { date, description: title, amount: parsed.amount, type: 'withdrawal', category_name: '', external_id, notes: parsed.currency });
+        }
       } else {
-        // Fallback: couldn't parse amountInfo, record the main amount as-is
-        addToGroup(parsed.currency, {
-          date,
-          description: title,
-          amount: parsed.amount,
-          type: 'withdrawal',
-          category_name: '',
-          external_id,
-          notes: parsed.currency,
-        });
+        addToGroup(parsed.currency, { date, description: title, amount: parsed.amount, type: parsed.isDeposit ? 'deposit' : 'withdrawal', category_name: '', external_id, notes: parsed.currency });
       }
-    } else {
-      // Regular transaction (single currency purchase or deposit)
+    }
+  } else {
+    // --- /home page fallback ---
+    const homeLinks = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('a[href*="urn%3Awise%3Aactivities%3A"]')
+    );
+
+    for (const link of homeLinks) {
+      const titleEl = link.querySelector<HTMLElement>('[class*="activitySummaryTitle"]');
+      const dateEl = link.querySelector<HTMLElement>('[class*="activitySummaryDescription"]');
+      const amountEl = link.querySelector<HTMLElement>('[class*="summaryAmount"]');
+
+      if (!titleEl || !amountEl) continue;
+
+      const parsed = parseAmount(amountEl);
+      if (!parsed) continue;
+
+      let external_id = '';
+      const urnMatch = link.href.match(/urn%3Awise%3Aactivities%3A([^&]+)/);
+      if (urnMatch) {
+        try {
+          const decoded = atob(decodeURIComponent(urnMatch[1]));
+          const parts = decoded.split('::');
+          if (parts.length >= 4) external_id = `${parts[2]}-${parts[3]}`;
+        } catch (_) {}
+      }
+
       addToGroup(parsed.currency, {
-        date,
-        description: title,
+        date: parseDate(dateEl?.textContent?.trim() ?? ''),
+        description: titleEl.textContent?.trim() ?? '',
         amount: parsed.amount,
         type: parsed.isDeposit ? 'deposit' : 'withdrawal',
         category_name: '',
