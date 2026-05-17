@@ -10,6 +10,7 @@ export default function EmptyState() {
       <li>Scotiabank Credit</li>
       <li>Wealthsimple</li>
       <li>Rogersbank</li>
+      <li>Wise</li>
     </ul>
 
   </div>

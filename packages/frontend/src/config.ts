@@ -1,6 +1,6 @@
 import type { Transaction } from "@openbanker/core/types";
 
-import { ScotiabankCredit, ScotiabankChequing, RBC, RogersBank, Wealthsimple, NGPF } from "@openbanker/plugins";
+import { ScotiabankCredit, ScotiabankChequing, RBC, RogersBank, Wealthsimple, NGPF, Wise } from "@openbanker/plugins";
 
 export type PluginConfig = {
   name: string;
@@ -43,6 +43,11 @@ const config: Config = {
       name: "NGPF",
       urlPattern: /ngpf\.org\/bank-sim\/account/g,
       scrapeFunc: NGPF
+    },
+    {
+      name: "Wise",
+      urlPattern: /wise\.com\/(home|all-transactions)/,
+      scrapeFunc: Wise
     }
   ]
 }
