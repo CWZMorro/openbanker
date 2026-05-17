@@ -1,11 +1,11 @@
-import type { Transaction } from "@openbanker/core/types";
+import type { Transaction, TransactionGroup } from "@openbanker/core/types";
 
 import { ScotiabankCredit, ScotiabankChequing, RBC, RogersBank, Wealthsimple, NGPF, Wise } from "@openbanker/plugins";
 
 export type PluginConfig = {
   name: string;
   urlPattern: RegExp;
-  scrapeFunc: () => Transaction[];
+  scrapeFunc: () => TransactionGroup[] | Transaction[];
 }
 
 export type Config = {

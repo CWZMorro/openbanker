@@ -14,9 +14,14 @@ import { CiBank } from "react-icons/ci";
 import { HiChevronDown } from "react-icons/hi2";
 
 import useChromeStorage from "@/hooks/useChromeStorage";
-import type { ActualBudgetAccount } from "@openbanker/core/types";
+import type { ActualBudgetAccount, TransactionGroup } from "@openbanker/core/types";
+import { CHROME_STORAGE_STRATEGY } from "@/hooks/useChromeStorage";
 
-export default function SyncAccountsButton() {
+type Props = {
+  group: TransactionGroup;
+}
+
+export default function SyncAccountsButton({ group }: Props) {
   const [actualBudgetAccounts] = useChromeStorage("actualBudgetAccounts", []);
   const [currActualBudgetAccount, setCurrActualBudgetAccount] = useState<ActualBudgetAccount | null>(null);
 
@@ -26,7 +31,11 @@ export default function SyncAccountsButton() {
 
   function handleExportToAccount() {
     if (currActualBudgetAccount === null) return;
-    window.open(`https://demo.openbanker.org/accounts/${currActualBudgetAccount.id}?openBankerSync=true`, "_blank");
+    const url = `https://demo.openbanker.org/accounts/${currActualBudgetAccount.id}?openBankerSync=true`;
+    // Write this group's transactions first, then open the tab once storage is confirmed written
+    chrome.storage[CHROME_STORAGE_STRATEGY].set({ exportGroup: group.transactions }, () => {
+      window.open(url, "_blank");
+    });
   }
 
   const isCurrAccountNull = currActualBudgetAccount === null;

@@ -5,14 +5,14 @@ import config from "@/config";
 
 import TransactionsTable from "@/components/TransactionsTable";
 import ActionButtons from "@/components/ActionButtons";
+import SyncAccountsButton from "@/components/ActionButtons/SyncAccountsButton";
 import EmptyState from "@/components/EmptyState";
-import { emptyTransactionStore } from "@openbanker/core/types";
+import { emptyTransactionStore, type TransactionGroup, type Transaction } from "@openbanker/core/types";
 import { getChromeContext } from "@/lib/utils";
 import useChromeStorage from "@/hooks/useChromeStorage";
 
 export default function App() {
   const [transactionStore, setTransactionStore] = useChromeStorage("transactionStore", emptyTransactionStore())
-
 
   useEffect(() => {
     if (getChromeContext() !== 'extension') return;
@@ -33,7 +33,14 @@ export default function App() {
         });
 
         if (res && res[0] && res[0].result) {
-          setTransactionStore({ pluginName: plugin.name, transactions: res[0].result });
+          const raw = res[0].result as TransactionGroup[] | Transaction[];
+          let groups: TransactionGroup[];
+          if (Array.isArray(raw) && raw.length > 0 && 'account' in raw[0]) {
+            groups = raw as TransactionGroup[];
+          } else {
+            groups = [{ account: plugin.name, transactions: raw as Transaction[] }];
+          }
+          setTransactionStore({ pluginName: plugin.name, groups });
         }
 
       }
@@ -41,6 +48,9 @@ export default function App() {
     detectTransactions();
 
   }, []);
+
+  const hasData = transactionStore.pluginName !== "";
+  const multiGroup = transactionStore.groups.length > 1;
 
   return (
     <div className="m-5 flex flex-col space-y-5 min-w-[600px]">
@@ -56,16 +66,31 @@ export default function App() {
       </div>
 
       {
-        transactionStore.pluginName !== "" && (
-          < div className="font-bold">
+        hasData && (
+          <div className="font-bold">
             Plugin: {transactionStore.pluginName}
           </div>
         )
-
       }
 
-      {transactionStore.pluginName === "" ? <EmptyState /> : <TransactionsTable transactions={transactionStore.transactions} />}
-
+      {!hasData ? <EmptyState /> : (
+        transactionStore.groups.map(group => (
+          <div key={group.account} className="flex flex-col space-y-2">
+            <div className="flex items-center justify-between">
+              {multiGroup && (
+                <span className="font-semibold">
+                  {group.account}
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    ({group.transactions.length})
+                  </span>
+                </span>
+              )}
+              <SyncAccountsButton group={group} />
+            </div>
+            <TransactionsTable transactions={group.transactions} />
+          </div>
+        ))
+      )}
     </div>
   );
 }

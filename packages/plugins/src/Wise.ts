@@ -1,6 +1,6 @@
-import type { Transaction } from "@openbanker/core/types";
+import type { Transaction, TransactionGroup } from "@openbanker/core/types";
 
-export default function scrape(): Transaction[] {
+export default function scrape(): TransactionGroup[] {
   function parseDate(raw: string): string {
     const str = raw.trim();
     const months: Record<string, number> = {
@@ -67,7 +67,13 @@ export default function scrape(): Transaction[] {
 
   if (!links.length) return [];
 
-  const transactions: Transaction[] = [];
+  const groups: Record<string, Transaction[]> = {};
+
+  function addToGroup(currency: string, tx: Transaction) {
+    if (!groups[currency]) groups[currency] = [];
+    groups[currency].push(tx);
+  }
+
   for (const link of links) {
     const statusEl = link.querySelector<HTMLElement>('[id$="-status"]');
     if (statusEl?.textContent?.trim().toLowerCase() === 'cancelled') continue;
@@ -88,7 +94,7 @@ export default function scrape(): Transaction[] {
     const isConversionIn = /^To\s+[A-Z]{3}$/.test(title);
     const date = parseDate(dateEl?.textContent?.trim() ?? '');
 
-    transactions.push({
+    addToGroup(parsed.currency, {
       date,
       description: title,
       amount: parsed.amount,
@@ -105,7 +111,7 @@ export default function scrape(): Transaction[] {
         const sourceText = amountInfoEl.textContent?.trim() ?? '';
         const sourceMatch = sourceText.match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
         if (sourceMatch) {
-          transactions.push({
+          addToGroup(sourceMatch[2], {
             date,
             description: title,
             amount: parseFloat(sourceMatch[1].replace(/,/g, '')),
@@ -119,5 +125,8 @@ export default function scrape(): Transaction[] {
     }
   }
 
-  return transactions;
+  return Object.entries(groups).map(([currency, transactions]) => ({
+    account: `Wise ${currency}`,
+    transactions,
+  }));
 }

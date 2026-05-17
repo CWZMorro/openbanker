@@ -3,23 +3,26 @@ import { type AppStorage } from "@openbanker/core/types";
 
 const CHROME_STORAGE_STRATEGY = "local";
 
-// Event: Handle CSV export request from web page
 chrome.runtime.onMessage.addListener(async (message, sender, _sendResponse) => {
   if (message.name === "openbanker-transactions-csv-request") {
+    const result = await chrome.storage[CHROME_STORAGE_STRATEGY].get(["transactionStore", "exportGroup"]) as Partial<AppStorage>;
 
-    const keysToGet: Array<keyof AppStorage> = ["transactionStore"];
-    const result = await chrome.storage[CHROME_STORAGE_STRATEGY].get(keysToGet) as Partial<AppStorage>;
+    // exportGroup is set by SyncAccountsButton for per-group export; fall back to all transactions
+    const transactions = result.exportGroup
+      ?? result.transactionStore?.groups?.flatMap(g => g.transactions)
+      ?? [];
 
-    if (result.transactionStore) {
-      const csvContent = toCSV(result.transactionStore.transactions);
+    const csvContent = toCSV(transactions);
 
-      // Send response back to the requesting tab
-      if (sender.tab?.id) {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          name: "openbanker-transactions-csv-response",
-          transactions: csvContent,
-        });
-      }
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        name: "openbanker-transactions-csv-response",
+        transactions: csvContent,
+      });
+    }
+
+    if (result.exportGroup) {
+      chrome.storage[CHROME_STORAGE_STRATEGY].remove("exportGroup");
     }
     return;
   }

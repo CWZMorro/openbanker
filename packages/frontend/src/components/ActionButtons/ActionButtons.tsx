@@ -5,7 +5,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 // import { Button } from "@/components/ui/button";
 
 import DownloadCsvButton from "@/components/ActionButtons/DownloadCsvButton";
-import SyncAccountsButton from "./SyncAccountsButton";
+// import SyncAccountsButton from "./SyncAccountsButton"; // moved to per-group in App.tsx
 // import CategorizeButton from "@/components/ActionButtons/Categorization/CategorizeButton";
 // import CategoryConfigDialog from "@/components/ActionButtons/Categorization/CategoryConfigDialog";
 
@@ -27,7 +27,7 @@ export default function ActionButtons() {
         {/*   </Button> */}
         {/* </ButtonGroup> */}
         <ButtonGroup>
-          <SyncAccountsButton />
+          {/* <SyncAccountsButton /> */}
           {/* <Button */}
           {/*   size="sm" */}
           {/*   className="group" */}

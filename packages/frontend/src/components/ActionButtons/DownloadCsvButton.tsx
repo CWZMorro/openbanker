@@ -11,7 +11,8 @@ export default function DownloadCSVButton() {
   function exportCSV() {
     const pluginNameSnakeCase = currTransactions.pluginName.replace(/\s+/g, "_").toLowerCase();
 
-    const csvContent = toCSV(currTransactions.transactions);
+    const allTransactions = currTransactions.groups.flatMap(g => g.transactions);
+    const csvContent = toCSV(allTransactions);
 
     // Create a blob and trigger download
     // A Blob is a high-level representation of immutable raw data (data object)

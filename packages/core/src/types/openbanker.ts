@@ -1,6 +1,11 @@
+export type TransactionGroup = {
+  account: string;
+  transactions: Transaction[];
+}
+
 export type TransactionList = {
-  transactions: Transaction[],
-  pluginName: string
+  groups: TransactionGroup[];
+  pluginName: string;
 }
 
 export type ActualBudgetAccount = {
@@ -9,12 +14,13 @@ export type ActualBudgetAccount = {
 }
 
 export function emptyTransactionStore(): TransactionList {
-  return { transactions: [], pluginName: "" }
+  return { groups: [], pluginName: "" }
 }
 
 export type AppStorage = {
-  transactionStore: TransactionList; // transactions marked for import into ActualBudget
-  actualBudgetAccounts: ActualBudgetAccount[]; // ActualBudget accounts fetched from the app
+  transactionStore: TransactionList;
+  actualBudgetAccounts: ActualBudgetAccount[];
+  exportGroup: Transaction[];
 }
 
 export type Transaction = {
