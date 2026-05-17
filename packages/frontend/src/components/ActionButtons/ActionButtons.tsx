@@ -27,22 +27,6 @@ export default function ActionButtons() {
         {/*   </Button> */}
         {/* </ButtonGroup> */}
         <ButtonGroup>
-          {/* <SyncAccountsButton /> */}
-          {/* <Button */}
-          {/*   size="sm" */}
-          {/*   className="group" */}
-          {/*   asChild> */}
-          {/*   <a */}
-          {/*     href="https://actual.amperleft.com/" */}
-          {/*     target="_blank" */}
-          {/*     rel="noopener noreferrer" */}
-          {/*     className="bg-red-200 hover:bg-red-300" */}
-          {/*   > */}
-          {/*     <FaExternalLinkAlt className="text-black transition-transform duration-300 ease-in-out group-hover:rotate-90 group-hover:scale-150" /> */}
-          {/*   </a> */}
-          {/* </Button> */}
-        </ButtonGroup>
-        <ButtonGroup>
           <DownloadCsvButton />
         </ButtonGroup>
       </ButtonGroup>

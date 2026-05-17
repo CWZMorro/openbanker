@@ -34,6 +34,10 @@ export default function SyncAccountsButton({ group }: Props) {
     const url = `https://demo.openbanker.org/accounts/${currActualBudgetAccount.id}?openBankerSync=true`;
     // Write this group's transactions first, then open the tab once storage is confirmed written
     chrome.storage[CHROME_STORAGE_STRATEGY].set({ exportGroup: group.transactions }, () => {
+      if (chrome.runtime.lastError) {
+        console.error("Failed to write exportGroup:", chrome.runtime.lastError);
+        return;
+      }
       window.open(url, "_blank");
     });
   }

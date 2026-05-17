@@ -20,7 +20,7 @@ export function emptyTransactionStore(): TransactionList {
 export type AppStorage = {
   transactionStore: TransactionList;
   actualBudgetAccounts: ActualBudgetAccount[];
-  exportGroup: Transaction[];
+  exportGroup?: Transaction[];
 }
 
 export type Transaction = {

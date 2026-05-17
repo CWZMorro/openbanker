@@ -41,7 +41,7 @@ const config: Config = {
     },
     {
       name: "NGPF",
-      urlPattern: /ngpf\.org\/bank-sim\/account/g,
+      urlPattern: /ngpf\.org\/bank-sim\/account/,
       scrapeFunc: NGPF
     },
     {
