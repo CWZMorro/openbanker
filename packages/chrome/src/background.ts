@@ -22,7 +22,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, _sendResponse) => {
     }
 
     if (result.exportGroup) {
-      chrome.storage[CHROME_STORAGE_STRATEGY].remove("exportGroup");
+      await chrome.storage[CHROME_STORAGE_STRATEGY].remove("exportGroup");
     }
     return;
   }

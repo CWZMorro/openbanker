@@ -69,7 +69,7 @@ export default function scrape(): TransactionGroup[] {
     const positiveSpan = amountEl.querySelector<HTMLElement>('[class*="positive"]');
     const rawText = (positiveSpan ?? amountEl).textContent?.trim() ?? '';
     const isDeposit = !!positiveSpan || rawText.startsWith('+');
-    const cleaned = rawText.replace(/^\+\s*/, '').trim();
+    const cleaned = rawText.replace(/^[+\-]\s*/, '').trim();
     const match = cleaned.match(/^([\d,]+\.?\d*)\s+([A-Z]{3})$/);
     if (!match) {
       console.warn("Wise: could not parse amount:", rawText);
@@ -157,7 +157,7 @@ export default function scrape(): TransactionGroup[] {
           const decoded = atob(decodeURIComponent(urnMatch[1]));
           const parts = decoded.split('::');
           if (parts.length >= 4) external_id = `${parts[2]}-${parts[3]}`;
-        } catch (_) {}
+        } catch (_) { }
       }
 
       addToGroup(parsed.currency, {
